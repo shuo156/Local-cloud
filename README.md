@@ -13,12 +13,12 @@
 内置管理员账号shuo（可改），拥有最高权限
 
 **项目目录结构示例**
-/storage/7392-1BFD/mycloud/（*此处为我老手机外置存储卡目录，根据自身需求改*）
-├── *shuo*（可改）/           # 管理员目录
+/storage/7392-1BFD/mycloud/（*此处为我老手机外置存储卡目录，根据自身需求改，后同*）
 ├── user1/          # 普通用户目录
 ├── user2/          # 普通用户目录
 ├── *users.json*# 用户信息（账号 / 密码<自动保存>）
 ├── *app.py*# 后端核心代码
+├── *html页面若干*# html可视化页面
 
 **技术栈**
 **Python 3.x*
@@ -40,7 +40,7 @@ mkdir -p /storage/7392-1BFD/mycloud
 3️⃣ *启动项目*
 cd /storage/7392-1BFD/mycloud
 python app.py
-默认访问地址：**http://你的手机IP:5000*（可改）
+默认访问地址：http://你的手机IP:5000（可改）
 
 **默认管理员**
 用户名：shuo（可改）
