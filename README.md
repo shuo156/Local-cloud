@@ -40,7 +40,7 @@ mkdir -p /storage/7392-1BFD/mycloud
 3️⃣ *启动项目*
 cd /storage/7392-1BFD/mycloud
 python app.py
-默认访问地址：http://你的手机IP:5000（可改）
+默认访问地址：http://你的手机IP:8080（可改）
 
 **默认管理员**
 用户名：shuo（可改）
