@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<title>文件管理</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body {
+    font-family: sans-serif;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #f5f7fa;
+    box-sizing: border-box;
+  }
+  h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 10px;
+  }
+  .folder-path {
+    font-size: 14px;
+    color: #666;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .file-list {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px dashed #eee;
+    font-size: 14px;
+  }
+  .file-item:last-child {
+    border-bottom: none;
+  }
+  .file-item span.name {
+    flex: 1;
+  }
+  .actions a,
+  .actions button {
+    margin-left: 8px;
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+  }
+  .actions a.download-btn {
+    background: #3498db;
+    color: #fff;
+  }
+  .actions a.edit-btn {
+    background: #27ae60;
+    color: #fff;
+  }
+  .actions button.delete-btn {
+    background: #e74c3c;
+    color: #fff;
+  }
+  .back-btn {
+    width: 100%;
+    margin-top: 20px;
+    padding: 14px;
+    background-color: #aaa;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<h2 id="category-title">文件管理</h2>
+<div class="folder-path" id="folder-path">当前路径：/</div>
+
+<div class="file-list" id="fileList"></div>
+
+<button class="back-btn" onclick="goBack()">返回上一级</button>
+
+<script>
+let path = decodeURIComponent(location.pathname.replace('/category/', ''));
+
+function refreshList() {
+  document.getElementById('folder-path').innerText = '当前路径：' + path;
+  fetch('/files/' + encodeURIComponent(path))
+    .then(res => res.json())
+    .then(files => {
+      const container = document.getElementById('fileList');
+      container.innerHTML = '';
+      if (files.length === 0) {
+        container.innerHTML = '<p style="text-align:center;">暂无文件或文件夹</p>';
+      } else {
+        files.forEach(f => {
+          const nameSpan = `<span class="name">${f.name} ${f.is_dir ? '[文件夹]' : '(' + f.size + ')'}</span>`;
+          const downloadLink = f.is_dir
+            ? `<a class="download-btn" href="/category/${encodeURIComponent(path + '/' + f.name)}">进入</a>`
+            : `<a class="download-btn" href="/download/${path}/${encodeURIComponent(f.name)}">下载</a>`;
+          const editLink = !f.is_dir
+            ? `<a class="edit-btn" href="/edit.html?folder=${encodeURIComponent(path)}&filename=${encodeURIComponent(f.name)}">编辑</a>`
+            : '';
+          const deleteBtn = `<button class="delete-btn" onclick="deleteFile('${path}', '${encodeURIComponent(f.name)}')">删除</button>`;
+          container.innerHTML += `
+            <div class="file-item">
+              ${nameSpan}
+              <span class="actions">
+                ${downloadLink}
+                ${editLink}
+                ${deleteBtn}
+              </span>
+            </div>`;
+        });
+      }
+    });
+}
+
+function deleteFile(folder, filename) {
+  if (!confirm('确定删除？此操作不可恢复！')) return;
+  fetch('/delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ folder, filename })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.error) alert('删除失败：' + data.error);
+    else refreshList();
+  });
+}
+
+function goBack() {
+  if (!path.includes('/')) {
+    location.href = '/';
+  } else {
+    path = path.split('/').slice(0, -1).join('/');
+    location.href = '/category/' + encodeURIComponent(path);
+  }
+}
+
+refreshList();
+</script>
+</body>
+</html>

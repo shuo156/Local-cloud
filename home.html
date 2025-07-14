@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>私人云盘首页</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+    body {
+        font-family: sans-serif;
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f5f7fa;
+        box-sizing: border-box;
+    }
+    h2 {
+        text-align: center;
+        color: #333;
+        margin-bottom: 20px;
+    }
+    .category {
+        background: white;
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .category h3 {
+        margin-top: 0;
+        font-size: 18px;
+        color: #3498db;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .category ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .category ul li {
+        padding: 6px 0;
+        font-size: 14px;
+        border-bottom: 1px dashed #eee;
+    }
+    .upload-btn {
+        width: 100%;
+        padding: 14px;
+        margin: 10px 0;
+        background-color: #3498db;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .logout-btn {
+        background-color: #aaa;
+    }
+    a {
+        color: #3498db;
+        text-decoration: none;
+        font-size: 14px;
+    }
+</style>
+</head>
+<body>
+<h2>我的私人云盘</h2>
+
+<input type="file" id="fileInput" multiple style="display:none;">
+<button class="upload-btn" onclick="document.getElementById('fileInput').click()">上传文件（支持多选）</button>
+<button class="upload-btn" onclick="createFile()">创建新文件</button>
+<button class="upload-btn" onclick="createFolder()">创建新文件夹</button>
+
+<div id="categories"></div>
+
+<button class="upload-btn logout-btn" onclick="logout()">退出登录</button>
+
+<script>
+document.getElementById('fileInput').addEventListener('change', function(){
+    const files = this.files;
+    if (!files.length) return;
+    const formData = new FormData();
+    for (let file of files) {
+        formData.append('file', file);
+    }
+    fetch('/upload', { method: 'POST', body: formData })
+        .then(() => { loadFiles(); alert('上传成功！'); });
+});
+
+function loadFiles() {
+    fetch('/files')
+        .then(res => res.json())
+        .then(data => {
+            const container = document.getElementById('categories');
+            container.innerHTML = '';
+            for (const folder in data) {
+                const files = data[folder].slice(0, 3);
+                let html = `<div class="category">
+                    <h3>${folder} <a href="/category/${folder}">进入</a></h3>
+                    <ul>`;
+                if (files.length === 0) {
+                    html += `<li>暂无文件</li>`;
+                } else {
+                    files.forEach(f => {
+                        html += `<li>${f.name} (${f.size})</li>`;
+                    });
+                }
+                html += `</ul></div>`;
+                container.innerHTML += html;
+            }
+        });
+}
+
+function createFile() {
+    const filename = prompt('请输入新文件名（如 notes.txt）');
+    if (!filename) return;
+    fetch('/create_file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder: '其他', filename })
+    }).then(() => location.reload());
+}
+
+function createFolder() {
+    const foldername = prompt('请输入新建的子目录名');
+    if (!foldername) return;
+    fetch('/create_folder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder: '其他', foldername })
+    }).then(() => location.reload());
+}
+
+function logout() {
+    fetch('/logout', { method: 'POST' })
+        .then(() => location.href = '/');
+}
+
+loadFiles();
+</script>
+</body>
+</html>
