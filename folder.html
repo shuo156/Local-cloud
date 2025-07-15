@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<title>文件夹浏览</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body {
+    font-family: sans-serif;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #f5f7fa;
+    box-sizing: border-box;
+  }
+  h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 20px;
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+  li {
+    padding: 6px 0;
+    font-size: 14px;
+    border-bottom: 1px dashed #eee;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  li a {
+    color: #3498db;
+    text-decoration: none;
+    flex: 1;
+  }
+  li a:hover {
+    text-decoration: underline;
+  }
+  button.delete-btn {
+    background-color: #e74c3c;
+    border: none;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-left: 10px;
+  }
+  button.delete-btn:hover {
+    background-color: #c0392b;
+  }
+  .upload-btn {
+    width: 100%;
+    padding: 14px;
+    margin: 10px 0;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    cursor: pointer;
+  }
+  .upload-btn.back-btn {
+    background-color: #aaa;
+  }
+  /* 上传进度条 */
+  .progress-container {
+    width: 100%;
+    height: 8px;
+    background-color: #eee;
+    border-radius: 4px;
+    margin: 10px 0;
+    display: none;
+  }
+  .progress-bar {
+    height: 100%;
+    background-color: #3498db;
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+  .progress-text {
+    color: #666;
+    font-size: 14px;
+    text-align: center;
+    margin-bottom: 10px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<h2 id="folderTitle">加载中...</h2>
+
+<!-- 上传进度条 -->
+<div class="progress-text" id="uploadProgressText">正在上传...</div>
+<div class="progress-container" id="uploadProgressContainer">
+  <div class="progress-bar" id="uploadProgressBar"></div>
+</div>
+
+<input type="file" id="fileInput" multiple style="display:none" />
+<button class="upload-btn" onclick="document.getElementById('fileInput').click()">上传文件（支持多选）</button>
+<button class="upload-btn back-btn" onclick="goBack()">返回其他目录</button>
+
+<ul id="fileList"></ul>
+
+<script>
+  const urlParams = new URLSearchParams(window.location.search);
+  const folderName = urlParams.get('folder') || '';
+  const folderTitle = document.getElementById('folderTitle');
+  const fileList = document.getElementById('fileList');
+
+  folderTitle.textContent = `文件夹: ${folderName}`;
+
+  // 加载文件列表
+  function loadFolderFiles() {
+    fetch(`/files/${encodeURIComponent(folderName)}`)
+      .then(res => {
+        if (!res.ok) throw new Error('加载失败');
+        return res.json();
+      })
+      .then(data => {
+        fileList.innerHTML = '';
+        if (!data || data.length === 0) {
+          fileList.innerHTML = '<li>该文件夹为空</li>';
+          return;
+        }
+        data.forEach(item => {
+          const li = document.createElement('li');
+          if (item.is_dir) {
+            // 文件夹不允许嵌套浏览，显示名称 + 删除按钮
+            li.textContent = `📁 ${item.name} （禁止嵌套）`;
+            // 添加删除按钮
+            const btn = createDeleteButton(item.name, true);
+            li.appendChild(btn);
+          } else {
+            // 文件，显示链接和删除按钮
+            const a = document.createElement('a');
+            a.href = `/download/${encodeURIComponent(folderName)}/${encodeURIComponent(item.name)}`;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.title = item.name;
+            a.textContent = item.name.length > 30 ? item.name.slice(0, 27) + '...' : item.name;
+            li.appendChild(a);
+            if (item.size) {
+              const sizeSpan = document.createElement('span');
+              sizeSpan.textContent = ` (${item.size})`;
+              sizeSpan.style.marginLeft = '6px';
+              li.appendChild(sizeSpan);
+            }
+            const btn = createDeleteButton(item.name, false);
+            li.appendChild(btn);
+          }
+          fileList.appendChild(li);
+        });
+      })
+      .catch(() => {
+        fileList.innerHTML = '<li>加载失败，请刷新重试</li>';
+      });
+  }
+
+  // 创建删除按钮
+  function createDeleteButton(name, isDir) {
+    const btn = document.createElement('button');
+    btn.textContent = '删除';
+    btn.className = 'delete-btn';
+    btn.onclick = () => {
+      if (confirm(`确定要删除${isDir ? '文件夹' : '文件'} "${name}" 吗？此操作不可恢复！`)) {
+        deleteItems([name], isDir);
+      }
+    };
+    return btn;
+  }
+
+  // 调用后端批量删除接口
+  function deleteItems(names, isDir) {
+    // 构造paths，文件夹不允许嵌套，这里路径为 folderName + / + name
+    const paths = names.map(n => `${folderName}/${n}`);
+    fetch('/batch_delete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ paths })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.error) {
+        alert('删除失败: ' + data.error);
+      } else {
+        alert('删除任务已提交，稍后刷新文件列表');
+        // 等一小段时间后刷新列表
+        setTimeout(loadFolderFiles, 1500);
+      }
+    })
+    .catch(() => alert('删除请求失败，请重试'));
+  }
+
+  document.getElementById('fileInput').addEventListener('change', function() {
+    const files = this.files;
+    if (!files.length) return;
+
+    const progressContainer = document.getElementById('uploadProgressContainer');
+    const progressBar = document.getElementById('uploadProgressBar');
+    const progressText = document.getElementById('uploadProgressText');
+
+    progressContainer.style.display = 'block';
+    progressText.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressText.textContent = '准备上传...';
+
+    const formData = new FormData();
+    for (let file of files) {
+      formData.append('file', file);
+    }
+    formData.append('folder', folderName);
+    formData.append('user', '');
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/upload');
+
+    xhr.upload.addEventListener('progress', function(e) {
+      if (e.lengthComputable) {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        progressBar.style.width = percent + '%';
+        progressText.textContent = `正在上传: ${percent}%`;
+      }
+    });
+
+    xhr.addEventListener('load', function() {
+      if (xhr.status === 200) {
+        progressText.textContent = '上传成功！';
+        loadFolderFiles();
+        setTimeout(() => {
+          progressContainer.style.display = 'none';
+          progressText.style.display = 'none';
+          progressBar.style.width = '0%';
+        }, 2000);
+      } else {
+        progressText.textContent = '上传失败，请重试';
+      }
+    });
+
+    xhr.send(formData);
+  });
+
+  function goBack() {
+    window.location.href = '/'; // 返回首页，显示所有分类
+  }
+
+  // 页面加载时自动加载文件
+  loadFolderFiles();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>管理员用户管理</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .user-list {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .user-item {
+            padding: 10px;
+            border-bottom: 1px dashed #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .user-item:last-child {
+            border-bottom: none;
+        }
+        .file-list {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            max-height: 400px;
+            overflow-y: auto;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .file-item {
+            padding: 8px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+        }
+        .file-item input {
+            margin-right: 10px;
+        }
+        .file-item.dir {
+            color: #3498db;
+        }
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        .progress-container {
+            margin: 15px 0;
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar {
+            height: 100%;
+            background: #3498db;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .status-text {
+            color: #666;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>管理员用户管理</h2>
+        <button class="btn" onclick="location.href='/home.html'">返回主页</button>
+    </div>
+
+    <div class="user-list">
+        <h3>用户列表</h3>
+        <div id="userList"></div>
+    </div>
+
+    <div id="userFilesSection" style="display: none;">
+        <h3>
+            <span id="currentUserName">用户文件</span>
+            <button class="btn btn-primary" onclick="loadAllUsers()">返回用户列表</button>
+        </h3>
+        <div class="file-list" id="userFileList"></div>
+        <div>
+            <button class="btn btn-danger" onclick="batchDeleteUserFiles()">批量删除选中文件</button>
+        </div>
+        <div class="progress-container" id="deleteProgressContainer">
+            <div class="progress-bar" id="deleteProgressBar"></div>
+        </div>
+        <div class="status-text" id="deleteStatus"></div>
+    </div>
+
+    <script>
+        // 加载所有用户
+        function loadAllUsers() {
+            document.getElementById('userFilesSection').style.display = 'none';
+            fetch('/admin/users')
+                .then(res => {
+                    if (!res.ok) throw new Error('无权限');
+                    return res.json();
+                })
+                .then(data => {
+                    const userList = document.getElementById('userList');
+                    userList.innerHTML = '';
+                    data.users.forEach(username => {
+                        userList.innerHTML += `
+                            <div class="user-item">
+                                <span>${username}</span>
+                                <div>
+                                    <button class="btn btn-primary" onclick="loadUserFiles('${username}')">查看文件</button>
+                                    ${username !== 'shuo' ? 
+                                        `<button class="btn btn-danger" onclick="deleteUser('${username}')">删除用户</button>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                })
+                .catch(err => alert('加载用户失败: ' + err.message));
+        }
+
+        // 加载指定用户的文件
+        function loadUserFiles(username) {
+            document.getElementById('currentUserName').textContent = `${username} 的文件`;
+            fetch(`/admin/user_files/${username}`)
+                .then(res => res.json())
+                .then(data => {
+                    const fileList = document.getElementById('userFileList');
+                    fileList.innerHTML = '';
+                    data.files.forEach(file => {
+                        fileList.innerHTML += `
+                            <div class="file-item ${file.is_dir ? 'dir' : ''}">
+                                <input type="checkbox" value="${file.path}" id="file_${file.path}">
+                                <label for="file_${file.path}">
+                                    ${file.is_dir ? '[文件夹] ' : ''}${file.path} ${file.size ? `(${file.size})` : ''}
+                                </label>
+                            </div>
+                        `;
+                    });
+                    document.getElementById('userFilesSection').style.display = 'block';
+                });
+        }
+
+        // 批量删除用户文件
+        function batchDeleteUserFiles() {
+            const username = document.getElementById('currentUserName').textContent.split(' 的')[0];
+            const checkedItems = document.querySelectorAll('#userFileList input:checked');
+            if (checkedItems.length === 0) {
+                alert('请选择要删除的文件');
+                return;
+            }
+
+            const paths = Array.from(checkedItems).map(item => item.value);
+            fetch('/batch_delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paths, user: username })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) throw new Error(data.error);
+                    startProgressTracking(data.task_id);
+                })
+                .catch(err => alert('删除失败: ' + err.message));
+        }
+
+        // 删除用户
+        function deleteUser(username) {
+            if (!confirm(`确定要删除用户 ${username} 及其所有文件吗？`)) return;
+            
+            fetch(`/admin/delete_user/${username}`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) throw new Error(data.error);
+                    alert('用户删除任务已启动');
+                    if (data.task_id) {
+                        startProgressTracking(data.task_id);
+                    } else {
+                        loadAllUsers();
+                    }
+                })
+                .catch(err => alert('删除失败: ' + err.message));
+        }
+
+        // 跟踪删除进度
+        function startProgressTracking(task_id) {
+            const progressBar = document.getElementById('deleteProgressBar');
+            const progressContainer = document.getElementById('deleteProgressContainer');
+            const statusText = document.getElementById('deleteStatus');
+            
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            statusText.textContent = '删除中...';
+
+            const interval = setInterval(() => {
+                fetch(`/delete_progress/${task_id}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        progressBar.style.width = `${data.progress}%`;
+                        statusText.textContent = `${data.message} (${data.progress}%)`;
+
+                        if (data.status !== 'running') {
+                            clearInterval(interval);
+                            if (data.status === 'finished') {
+                                // 刷新列表
+                                const username = document.getElementById('currentUserName').textContent.split(' 的')[0];
+                                if (username.includes('的文件')) {
+                                    loadUserFiles(username.split(' 的')[0]);
+                                } else {
+                                    loadAllUsers();
+                                }
+                            }
+                        }
+                    });
+            }, 1000);
+        }
+
+        // 页面加载时执行
+        loadAllUsers();
+    </script>
+</body>
+</html>
