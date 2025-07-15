@@ -118,18 +118,24 @@
   <div class="storage-info" id="storageInfo">容量查询中...</div>
 </div>
 <h2>我的私人云盘</h2>
+
 <div class="progress-text" id="uploadProgressText">正在上传...</div>
 <div class="progress-container" id="uploadProgressContainer">
   <div class="progress-bar" id="uploadProgressBar"></div>
 </div>
+
 <input type="file" id="fileInput" multiple style="display:none" />
 <button class="upload-btn" onclick="document.getElementById('fileInput').click()">上传文件（支持多选）</button>
 <button class="upload-btn" onclick="createFolder()">创建新文件夹</button>
+
 <div id="categories"></div>
+
 <div id="adminEntry" style="display: none; margin: 20px 0;">
   <button class="upload-btn" style="background-color: #e74c3c;" onclick="location.href='/admin.html'">管理员用户管理</button>
 </div>
+
 <button class="upload-btn logout-btn" onclick="logout()">退出登录</button>
+
 <script>
 function loadCurrentUser() {
   fetch('/current_user')
@@ -147,18 +153,19 @@ function loadCurrentUser() {
       document.getElementById('currentUser').textContent = '未登录';
     });
 }
-// 直接使用后端传来的字符串显示，不拆分不改大小写，避免单位错误
+
 function loadStorageInfo() {
-    fetch('/storage_info')
-        .then(res => res.json())
-        .then(data => {
-            // 直接显示后端返回的带单位字符串，防止单位错误
-            document.getElementById('storageInfo').textContent = `${data.used}/${data.total}`;
-        })
-        .catch(() => {
-            document.getElementById('storageInfo').textContent = '容量查询失败';
-        });
+  fetch('/storage_info')
+    .then(res => res.json())
+    .then(data => {
+      // 这里直接显示后端传过来的字符串，避免单位错误
+      document.getElementById('storageInfo').textContent = `${data.used} / ${data.total}`;
+    })
+    .catch(() => {
+      document.getElementById('storageInfo').textContent = '容量查询失败';
+    });
 }
+
 function loadCategories() {
   fetch('/category_files')
     .then(res => {
@@ -189,32 +196,47 @@ function loadCategories() {
       document.getElementById('categories').innerHTML = '<p>加载失败，请刷新重试</p>';
     });
 }
+
 function truncateName(name, maxLen = 30) {
   if (name.length > maxLen) {
     return name.slice(0, maxLen - 3) + '...';
   }
   return name;
 }
+
 document.getElementById('fileInput').addEventListener('change', function () {
   const files = this.files;
   if (!files.length) return;
+
   const progressContainer = document.getElementById('uploadProgressContainer');
   const progressBar = document.getElementById('uploadProgressBar');
   const progressText = document.getElementById('uploadProgressText');
+
   progressContainer.style.display = 'block';
   progressText.style.display = 'block';
   progressBar.style.width = '0%';
   progressText.textContent = '准备上传...';
+
   const formData = new FormData();
   for (let file of files) {
     formData.append('file', file);
   }
   formData.append('folder', '其他');
-  fetch('/upload', {
-    method: 'POST',
-    body: formData,
-  }).then(res => {
-    if (res.ok) {
+
+  // 使用 XMLHttpRequest 以便可以监控上传进度
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/upload');
+
+  xhr.upload.onprogress = function(event) {
+    if (event.lengthComputable) {
+      let percent = (event.loaded / event.total) * 100;
+      progressBar.style.width = percent.toFixed(1) + '%';
+      progressText.textContent = `上传中... ${percent.toFixed(1)}%`;
+    }
+  };
+
+  xhr.onload = function() {
+    if (xhr.status >= 200 && xhr.status < 300) {
       progressText.textContent = '上传成功！';
       loadCategories();
       loadStorageInfo();
@@ -226,10 +248,15 @@ document.getElementById('fileInput').addEventListener('change', function () {
     } else {
       progressText.textContent = '上传失败，请重试';
     }
-  }).catch(() => {
+  };
+
+  xhr.onerror = function() {
     progressText.textContent = '上传失败，请重试';
-  });
+  };
+
+  xhr.send(formData);
 });
+
 function createFolder() {
   const foldername = prompt('请输入新建的子目录名');
   if (!foldername) return;
@@ -245,10 +272,12 @@ function createFolder() {
     }
   });
 }
+
 function logout() {
   fetch('/logout', { method: 'POST' })
     .then(() => window.location.href = '/index.html');
 }
+
 loadCurrentUser();
 loadCategories();
 loadStorageInfo();
