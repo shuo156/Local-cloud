@@ -133,13 +133,10 @@ def root():
         return redirect('/index.html')  # 登录页面改为 index.html
     return redirect('/home.html')       # 登录成功后的主页
 
-# 保留原来的登录接口
 @app.route('/index.html', methods=['GET', 'POST'])
 def index():
-    # 如果是 GET，直接返回登录页面文件
     if request.method == 'GET':
         return send_from_directory('./', 'index.html')
-    # POST 请求处理登录
     data = request.json or request.form
     if not data or not all(k in data for k in ['username', 'password']):
         return jsonify(error="请提供用户名和密码"), 400
@@ -407,6 +404,33 @@ def static_file(path):
     if any(f in path for f in FORBIDDEN_FILENAMES):
         abort(403)
     return send_from_directory('./', path)
+
+def get_directory_size(path):
+    total = 0
+    for dirpath, dirnames, filenames in os.walk(path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            try:
+                total += os.path.getsize(fp)
+            except Exception:
+                pass
+    return total
+
+@app.route('/storage_info')
+@login_required
+def storage_info():
+    username = session['username']
+    user_root = os.path.join(BASE_DIR, username)
+    used_size_bytes = get_directory_size(user_root)
+    total_size_bytes = 250 * 1024 * 1024 * 1024  # 每个用户配额 250GB
+    free_size_bytes = total_size_bytes - used_size_bytes
+    if free_size_bytes < 0:
+        free_size_bytes = 0
+    return jsonify({
+        'used': format_file_size(used_size_bytes),
+        'free': format_file_size(free_size_bytes),
+        'total': format_file_size(total_size_bytes)
+    })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=False)
