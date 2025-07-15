@@ -174,7 +174,7 @@
         categories.forEach(cat => {
           let files = data[cat] || [];
           const showFiles = files.slice(0, 3);
-          let html = `<div class="category"><h3>${cat} <a href="/category.html?cat=${encodeURIComponent(cat)}">进入</a></h3><ul>`;
+          let html = `<div class="category"><h3>${cat} <a href="/category.html?name=${encodeURIComponent(cat)}">进入</a></h3><ul>`;
           if (showFiles.length === 0) {
             html += `<li>暂无文件</li>`;
           } else {
