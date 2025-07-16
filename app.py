@@ -217,19 +217,21 @@ def category_files():
     folder_user = request.args.get('user')
     username = get_target_user(folder_user)
     user_root = os.path.join(BASE_DIR, username)
+
     categories = {k: [] for k in EXTENSION_CATEGORIES.keys()}
     categories['其他'] = []
-    for root, dirs, files in os.walk(user_root):
-        rel_root = os.path.relpath(root, user_root)
-        for file in files:
-            if file.lower() in FORBIDDEN_FILENAMES:
-                continue
-            fpath = os.path.join(root, file)
-            category = categorize_file(file)
-            categories[category].append({
-                "path": os.path.join(rel_root, file),
-                "size": format_file_size(os.path.getsize(fpath))
-            })
+
+    for category in categories.keys():
+        category_dir = os.path.join(user_root, category)
+        if not os.path.exists(category_dir):
+            continue
+        for file in os.listdir(category_dir):
+            fpath = os.path.join(category_dir, file)
+            if os.path.isfile(fpath) and file.lower() not in FORBIDDEN_FILENAMES:
+                categories[category].append({
+                    "path": os.path.join(category, file),
+                    "size": format_file_size(os.path.getsize(fpath))
+                })
     return jsonify(categories)
 
 @app.route('/batch_delete', methods=['POST'])
@@ -258,46 +260,60 @@ def get_delete_progress(task_id):
 @app.route('/upload', methods=['POST'])
 @login_required
 def upload():
-    folder = request.form.get('folder', '其他').strip('/')
+    folder = request.form.get('folder', '').strip('/')
     folder_user = request.form.get('user')
     username = get_target_user(folder_user)
     user_root = os.path.join(BASE_DIR, username)
-    target_dir = os.path.join(user_root, folder)
-    if not validate_user_path(user_root, target_dir):
-        return jsonify(error="非法路径"), 403
-    os.makedirs(target_dir, exist_ok=True)
-    files = request.files.getlist('file')
+
+    # 如果在自定义文件夹中上传，直接保存，不分类
+    if folder and folder != '':
+        target_dir = os.path.join(user_root, folder)
+        if not validate_user_path(user_root, target_dir):
+            return jsonify(error="非法路径"), 403
+        os.makedirs(target_dir, exist_ok=True)
+
     uploaded = 0
+    files = request.files.getlist('file')
     for file in files:
         if file.filename:
             safe_name = re.sub(r'[\\/:"*?<>|]', '_', file.filename)
             if safe_name.lower() in FORBIDDEN_FILENAMES:
                 continue
-            file.save(os.path.join(target_dir, safe_name))
+
+            if folder and folder != '':
+                # 自定义目录，直接保存
+                save_path = os.path.join(target_dir, safe_name)
+            else:
+                # 根目录上传，按扩展名自动分类
+                category = categorize_file(safe_name)
+                target_dir = os.path.join(user_root, category)
+                os.makedirs(target_dir, exist_ok=True)
+                save_path = os.path.join(target_dir, safe_name)
+
+            file.save(save_path)
             uploaded += 1
     return jsonify(message=f"成功上传 {uploaded} 个文件")
 
-@app.route('/files/<path:folder>')
+@app.route('/files/<path:category>')
 @login_required
-def list_files(folder):
+def list_files(category):
     folder_user = request.args.get('user')
     username = get_target_user(folder_user)
     user_root = os.path.join(BASE_DIR, username)
-    target_dir = os.path.join(user_root, folder)
-    if not validate_user_path(user_root, target_dir):
-        return jsonify(error="非法路径"), 403
-    os.makedirs(target_dir, exist_ok=True)
-    items = []
-    for name in os.listdir(target_dir):
-        if name.lower() in FORBIDDEN_FILENAMES:
-            continue
-        path = os.path.join(target_dir, name)
-        items.append({
-            'name': name,
-            'is_dir': os.path.isdir(path),
-            'size': format_file_size(os.path.getsize(path)) if os.path.isfile(path) else ''
+    target_dir = os.path.join(user_root, category)
+
+    if not validate_user_path(user_root, target_dir) or not os.path.exists(target_dir):
+        return jsonify([])
+
+    files = []
+    for entry in os.scandir(target_dir):
+        files.append({
+            'name': entry.name,
+            'path': os.path.relpath(entry.path, user_root),
+            'is_dir': entry.is_dir(),
+            'size': format_file_size(entry.stat().st_size) if entry.is_file() else ''
         })
-    return jsonify(items)
+    return jsonify(files)
 
 @app.route('/create_folder', methods=['POST'])
 @login_required
@@ -339,19 +355,17 @@ def create_file():
         f.write(data.get('content', ''))
     return jsonify(message="文件创建成功")
 
-@app.route('/download/<path:folder>/<filename>')
+@app.route('/download/<path:filepath>')
 @login_required
-def download(folder, filename):
-    if filename.lower() in FORBIDDEN_FILENAMES:
-        return jsonify(error="禁止下载敏感文件"), 403
-    folder_user = request.args.get('user')
-    username = get_target_user(folder_user)
+def download(filepath):
+    username = get_target_user(request.args.get('user'))
     user_root = os.path.join(BASE_DIR, username)
-    target_dir = os.path.join(user_root, folder)
-    target_path = os.path.join(target_dir, filename)
-    if not validate_user_path(user_root, target_path) or not os.path.isfile(target_path):
-        abort(404)
-    return send_from_directory(target_dir, filename, as_attachment=True)
+    abs_path = os.path.join(user_root, filepath)
+    if not validate_user_path(user_root, abs_path):
+        abort(403)
+    directory = os.path.dirname(abs_path)
+    filename = os.path.basename(abs_path)
+    return send_from_directory(directory, filename, as_attachment=True)
 
 @app.route('/read_file', methods=['POST'])
 @login_required

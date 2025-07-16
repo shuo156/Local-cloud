@@ -102,31 +102,29 @@
           return;
         }
         files.forEach(f => {
-          const fileName = f.name || f.path || '';
-          const safeName = encodeURIComponent(fileName);
+          const filePath = f.path || f.name || '';
+          const encodedPath = filePath.split('/').map(encodeURIComponent).join('/');
+
           const li = document.createElement('li');
 
           if (f.is_dir) {
-            // 文件夹，跳转到 folder.html?folder=...
             const a = document.createElement('a');
-            a.href = `/folder.html?folder=${safeName}`;
-            a.textContent = '📁 ' + fileName;
-            a.title = fileName;
+            a.href = `/folder.html?folder=${encodedPath}`;
+            a.textContent = '📁 ' + f.name;
+            a.title = filePath;
             a.className = 'filename';
             li.appendChild(a);
 
-            // 删除按钮
-            const btn = createDeleteButton(fileName, true);
+            const btn = createDeleteButton(filePath, true);
             li.appendChild(btn);
           } else {
-            // 文件，提供下载链接
             const a = document.createElement('a');
-            a.href = `/download/${encodeURIComponent(category)}/${safeName}`;
+            a.href = `/download/${encodedPath}`;
             a.target = '_blank';
             a.rel = 'noopener noreferrer';
-            a.title = fileName;
+            a.textContent = f.name;
+            a.title = filePath;
             a.className = 'filename';
-            a.textContent = fileName;
             li.appendChild(a);
 
             if (f.size) {
@@ -135,8 +133,7 @@
               sizeSpan.style.marginLeft = '6px';
               li.appendChild(sizeSpan);
             }
-            // 删除按钮
-            const btn = createDeleteButton(fileName, false);
+            const btn = createDeleteButton(filePath, false);
             li.appendChild(btn);
           }
           list.appendChild(li);
@@ -148,21 +145,19 @@
       });
   }
 
-  function createDeleteButton(name, isDir) {
+  function createDeleteButton(path, isDir) {
     const btn = document.createElement('button');
     btn.textContent = '删除';
     btn.className = 'delete-btn';
     btn.onclick = () => {
-      if (confirm(`确定要删除${isDir ? '文件夹' : '文件'} "${name}" 吗？此操作不可恢复！`)) {
-        deleteItems([name], isDir);
+      if (confirm(`确定要删除${isDir ? '文件夹' : '文件'} "${path}" 吗？此操作不可恢复！`)) {
+        deleteItems([path]);
       }
     };
     return btn;
   }
 
-  function deleteItems(names, isDir) {
-    // 构造路径格式为  分类名/文件名 或 分类名/文件夹名
-    const paths = names.map(n => `${category}/${n}`);
+  function deleteItems(paths) {
     fetch('/batch_delete', {
       method: 'POST',
       headers: {

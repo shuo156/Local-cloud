@@ -221,7 +221,6 @@ document.getElementById('fileInput').addEventListener('change', function () {
   for (let file of files) {
     formData.append('file', file);
   }
-  formData.append('folder', '其他');
 
   // 使用 XMLHttpRequest 以便可以监控上传进度
   const xhr = new XMLHttpRequest();
