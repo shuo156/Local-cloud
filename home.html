@@ -125,7 +125,7 @@
 </div>
 
 <input type="file" id="fileInput" multiple style="display:none" />
-<button class="upload-btn" onclick="document.getElementById('fileInput').click()">上传文件（支持多选）</button>
+<button class="upload-btn" onclick="document.getElementById('fileInput').click()">上传文件（支持多选，想上传文件夹请压缩）</button>
 <button class="upload-btn" onclick="createFolder()">创建新文件夹</button>
 
 <div id="categories"></div>
@@ -175,7 +175,7 @@ function loadCategories() {
     .then(data => {
       const container = document.getElementById('categories');
       container.innerHTML = '';
-      const categories = ['图片', '文档', '视频', '其他'];
+      const categories = ['图片', '文档', '视频', '压缩包', '音频', '其他'];
       categories.forEach(cat => {
         let files = data[cat] || [];
         const showFiles = files.slice(0, 3);
