@@ -38,7 +38,7 @@ def save_users(users):
 def init_user_dirs(username):
     user_root = os.path.join(BASE_DIR, username)
     os.makedirs(user_root, exist_ok=True)
-    for folder in ['图片', '文档', '视频', '其他']:
+    for folder in ['图片', '文档', '视频', '音频', '压缩包', '其他']:
         os.makedirs(os.path.join(user_root, folder), exist_ok=True)
 
 def format_file_size(size_bytes):
