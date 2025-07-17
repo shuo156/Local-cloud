@@ -1,88 +1,180 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-<meta charset="UTF-8">
-<title>注册 / 登录</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-    body {
-        font-family: sans-serif;
-        max-width: 400px;
-        margin: 0 auto;
-        padding: 50px 20px;
-        background-color: #f5f7fa;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        height: 100vh;
-        justify-content: center;
-        box-sizing: border-box;
-    }
-    h2 {
-        margin-bottom: 30px;
-        color: #333;
-    }
-    input {
-        width: 100%;
-        padding: 14px;
-        margin-bottom: 15px;
-        border: 1px solid #ddd;
-        border-radius: 12px;
-        font-size: 16px;
-        box-sizing: border-box;
-    }
-    button {
-        width: 100%;
-        padding: 14px;
-        margin-bottom: 15px;
-        background: #3498db;
-        color: white;
-        border: none;
-        border-radius: 12px;
-        font-size: 16px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    button:hover {
-        opacity: 0.9;
-    }
-</style>
+    <meta charset="UTF-8">
+    <title>注册 / 登录</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/css.css">
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 50px 20px;
+            background-color: #f5f7fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+        h2 {
+            margin-bottom: 30px;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 15px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .captcha-container {
+            position: relative;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-<h2>注册 / 登录</h2>
-<input type="text" id="username" placeholder="用户名">
-<input type="password" id="password" placeholder="密码（大小写字母+数字+符号）">
-<button onclick="register()">注册</button>
-<button onclick="login()">登录</button>
+    <h2>注册 / 登录</h2>
+    <input type="text" id="username" placeholder="用户名">
+    <input type="password" id="password" placeholder="密码（大小写字母+数字+符号）">
+    <div class="captcha-container">
+        <canvas id="captchaCanvas" width="150" height="50"></canvas>
+        <input type="text" id="captchaInput" placeholder="输入验证码">
+    </div>
+    <button onclick="register()">注册</button>
+    <button onclick="login()">登录</button>
 
-<script>
-function register() {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    fetch('/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-    }).then(res => res.json())
-    .then(data => {
-        alert(data.message || data.error);
-    });
-}
-function login() {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    fetch('/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-    }).then(res => res.json())
-    .then(data => {
-        if (data.error) {
-            alert(data.error);
-        } else {
-            location.href = '/';
+    <script>
+        let captchaCode = '';
+
+        function generateCaptcha() {
+            const canvas = document.getElementById('captchaCanvas');
+            const ctx = canvas.getContext('2d');
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjklmnpqrstuvwxyz23456789';
+            captchaCode = '';
+
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 随机背景色
+            ctx.fillStyle = `rgb(${Math.random() * 50 + 200}, ${Math.random() * 50 + 200}, ${Math.random() * 50 + 200})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 生成6位随机验证码
+            for (let i = 0; i < 6; i++) {
+                const char = chars[Math.floor(Math.random() * chars.length)];
+                captchaCode += char;
+                
+                // 绘制字符
+                ctx.font = `${Math.random() * 10 + 20}px Arial`;
+                ctx.fillStyle = `rgb(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255})`;
+                ctx.save();
+                ctx.translate(20 + i * 22, 35);
+                ctx.rotate((Math.random() - 0.5) * 0.4);
+                ctx.fillText(char, 0, 0);
+                ctx.restore();
+            }
+
+            // 绘制干扰线
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+                ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+                ctx.strokeStyle = `rgb(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255})`;
+                ctx.lineWidth = Math.random() * 2 + 1;
+                ctx.stroke();
+            }
+
+            // 绘制噪点
+            for (let i = 0; i < 50; i++) {
+                ctx.beginPath();
+                ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 2, 0, 2 * Math.PI);
+                ctx.fillStyle = `rgb(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255})`;
+                ctx.fill();
+            }
+
+            // 将验证码发送到后端存储
+            fetch('/store_captcha', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ captcha: captchaCode })
+            }).then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    generateCaptcha(); // 存储失败，重新生成
+                }
+            });
         }
-    });
-}
-</script>
+
+        // 页面加载时生成验证码
+        window.onload = generateCaptcha;
+
+        // 点击画布刷新验证码
+        document.getElementById('captchaCanvas').onclick = generateCaptcha;
+
+        function register() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const captcha = document.getElementById('captchaInput').value;
+            fetch('/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, captcha })
+            }).then(res => res.json())
+            .then(data => {
+                alert(data.message || data.error);
+                generateCaptcha();
+                document.getElementById('captchaInput').value = '';
+            });
+        }
+
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const captcha = document.getElementById('captchaInput').value;
+            fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, captcha })
+            }).then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    generateCaptcha();
+                    document.getElementById('captchaInput').value = '';
+                } else {
+                    location.href = '/';
+                }
+            });
+        }
+    </script>
 </body>
 </html>

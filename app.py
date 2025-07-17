@@ -11,7 +11,7 @@ app = Flask(__name__)
 app.secret_key = 'your_secure_secret_key_2024'
 CORS(app)
 
-BASE_DIR = '/storage/7392-1BFD/mycloud'
+BASE_DIR = '/storage/emulated/0/Download/users/' #这里默认在这个目录
 USER_FILE = os.path.join(BASE_DIR, 'users.json')
 os.makedirs(BASE_DIR, exist_ok=True)
 
@@ -138,8 +138,20 @@ def index():
     if request.method == 'GET':
         return send_from_directory('./', 'index.html')
     data = request.json or request.form
-    if not data or not all(k in data for k in ['username', 'password']):
-        return jsonify(error="请提供用户名和密码"), 400
+    if not data or not all(k in data for k in ['username', 'password', 'captcha']):
+        return jsonify(error="请提供用户名、密码和验证码"), 400
+
+    # 验证验证码
+    captcha = data['captcha']
+    if not session.get('captcha') or captcha.lower() != session['captcha'].lower():
+        return jsonify(error="验证码错误"), 400
+    if (datetime.now().timestamp() - session.get('captcha_time', 0)) > 300:  # 5分钟有效期
+        return jsonify(error="验证码已过期"), 400
+
+    # 清除验证码
+    session.pop('captcha', None)
+    session.pop('captcha_time', None)
+
     users = load_users()
     username = data['username']
     if username in users and users[username] == data['password']:
@@ -155,8 +167,20 @@ def current_user():
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
-    if not data or not all(k in data for k in ['username', 'password']):
-        return jsonify(error="请提供用户名和密码"), 400
+    if not data or not all(k in data for k in ['username', 'password', 'captcha']):
+        return jsonify(error="请提供用户名、密码和验证码"), 400
+
+    # 验证验证码
+    captcha = data['captcha']
+    if not session.get('captcha') or captcha.lower() != session['captcha'].lower():
+        return jsonify(error="验证码错误"), 400
+    if (datetime.now().timestamp() - session.get('captcha_time', 0)) > 300:  # 5分钟有效期
+        return jsonify(error="验证码已过期"), 400
+
+    # 清除验证码
+    session.pop('captcha', None)
+    session.pop('captcha_time', None)
+
     users = load_users()
     username = data['username']
     if username in users and users[username] == data['password']:
@@ -167,8 +191,20 @@ def login():
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
-    if not data or not all(k in data for k in ['username', 'password']):
-        return jsonify(error="请提供用户名和密码"), 400
+    if not data or not all(k in data for k in ['username', 'password', 'captcha']):
+        return jsonify(error="请提供用户名、密码和验证码"), 400
+
+    # 验证验证码
+    captcha = data['captcha']
+    if not session.get('captcha') or captcha.lower() != session['captcha'].lower():
+        return jsonify(error="验证码错误"), 400
+    if (datetime.now().timestamp() - session.get('captcha_time', 0)) > 300:  # 5分钟有效期
+        return jsonify(error="验证码已过期"), 400
+
+    # 清除验证码
+    session.pop('captcha', None)
+    session.pop('captcha_time', None)
+
     username = data['username']
     password = data['password']
     if not re.match(r'^[a-zA-Z0-9_]{3,20}$', username):
@@ -445,6 +481,15 @@ def storage_info():
         'free': format_file_size(free_size_bytes),
         'total': format_file_size(total_size_bytes)
     })
+
+@app.route('/store_captcha', methods=['POST'])
+def store_captcha():
+    data = request.json
+    if not data or 'captcha' not in data:
+        return jsonify(error="请提供验证码"), 400
+    session['captcha'] = data['captcha']
+    session['captcha_time'] = datetime.now().timestamp()  # 记录生成时间
+    return jsonify(message="验证码已存储")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=False)
