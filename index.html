@@ -87,8 +87,8 @@
             ctx.fillStyle = `rgb(${Math.random() * 50 + 200}, ${Math.random() * 50 + 200}, ${Math.random() * 50 + 200})`;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 生成6位随机验证码
-            for (let i = 0; i < 6; i++) {
+            // 生成4位随机验证码
+            for (let i = 0; i < 4; i++) {
                 const char = chars[Math.floor(Math.random() * chars.length)];
                 captchaCode += char;
                 
