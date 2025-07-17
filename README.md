@@ -36,10 +36,10 @@ pip install flask
 
 2️⃣ *目录准备*
 手动创建目录：
-mkdir -p /storage/7392-1BFD/mycloud
+mkdir -p /随便建一个目录，建议在老手机上/
 
 3️⃣ *启动项目*
-cd /storage/7392-1BFD/mycloud
+cd /你的存储目录/
 python app.py
 默认访问地址：http://你的手机IP:8080（可改）
 
