@@ -472,7 +472,7 @@ def storage_info():
     username = session['username']
     user_root = os.path.join(BASE_DIR, username)
     used_size_bytes = get_directory_size(user_root)
-    total_size_bytes = 250 * 1024 * 1024 * 1024  # 每个用户配额 250GB
+    total_size_bytes = 250 * 1024 * 1024 * 1024  # 每个用户配额 250GB，直接改250
     free_size_bytes = total_size_bytes - used_size_bytes
     if free_size_bytes < 0:
         free_size_bytes = 0
