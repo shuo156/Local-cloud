@@ -31,8 +31,8 @@
 <a>JSON本地用户数据库</a></br>
 <a>原生文件系统存储</a></br>
 
-**快速部署（Termux，若有相似软件也可更改）**
-
+<h3>准备步骤</h3>
+```JAVA
 1️⃣ *环境准备*
 pkg update && pkg install python
 pip install flask
@@ -45,6 +45,7 @@ mkdir -p /随便建一个目录，建议在老手机上/
 cd /你的存储目录/
 python app.py
 默认访问地址：http://你的手机IP:8080（可改）
+```
 
 **默认管理员**
 用户名：shuo（可改）
