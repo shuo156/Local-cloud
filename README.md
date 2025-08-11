@@ -24,14 +24,15 @@
 <a>├── html页面若干# html可视化页面</a></br>
 
 <h3>技术栈</h3>
-<a>*Python 3.x*</a></br>
-<a>*Flask*</a></br>
-<a>*HTML + CSS*（黑白扁平风格，适配移动端）</a></br>
-<a>*Jinja2*模板渲染</a></br>
-<a>*JSON*本地用户数据库</a></br>
+<a>Python 3.x</a></br>
+<a>Flask</a></br>
+<a>HTML + CSS（蓝白扁平风格，适配移动端）</a></br>
+<a>Jinja2模板渲染</a></br>
+<a>JSON本地用户数据库</a></br>
 <a>原生文件系统存储</a></br>
 
 **快速部署（Termux，若有相似软件也可更改）**
+
 1️⃣ *环境准备*
 pkg update && pkg install python
 pip install flask
