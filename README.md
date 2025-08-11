@@ -16,7 +16,7 @@
 </ul>
 
 <h3>项目目录结构示例</h3>
-/storage/emulated/0/Download/users/（*此处为我手机目录，根据自身需求在py里改，后同*）
+<a>/storage/emulated/0/Download/users/（此处为我手机目录，根据自身需求在py里改，后同）</a></br>
 ├── user1/          # 普通用户目录
 ├── user2/          # 普通用户目录
 ├── *users.json*# 用户信息（账号 / 密码<自动保存>）
