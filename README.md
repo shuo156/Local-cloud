@@ -32,7 +32,7 @@
 <a>原生文件系统存储</a></br>
 
 <h3>准备步骤</h3>
-```JAVA
+```
 1️⃣ *环境准备*
 pkg update && pkg install python
 pip install flask
