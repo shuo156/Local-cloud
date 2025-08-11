@@ -24,12 +24,13 @@
 <a>├── html页面若干# html可视化页面</a></br>
 
 <h3>技术栈</h3>
-<a>Python 3.x</a></br>
-<a>Flask</a></br>
-<a>HTML + CSS（蓝白扁平风格，适配移动端）</a></br>
-<a>Jinja2模板渲染</a></br>
-<a>JSON本地用户数据库</a></br>
-<a>原生文件系统存储</a></br>
+<ul>
+<li><a>Python 3.x</a></li>
+<li><a>Flask</a></li>
+<li><a>HTML + CSS（蓝白扁平风格，适配移动端）</a></li>
+<li><a>Jinja2模板渲染</a></li>
+<li><a>JSON本地用户数据库</a></li>
+<li><a>原生文件系统存储</a></li>
 
 <h3>准备步骤</h3>
 
